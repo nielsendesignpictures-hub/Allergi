@@ -148,6 +148,11 @@ section{padding:14px 16px 0}
 .foot{padding:28px 16px 40px; text-align:center; color:#5c7387; font-size:.72rem; line-height:1.6}
 .legend{display:flex; flex-wrap:wrap; gap:10px 16px; padding:14px 16px 0; font-size:.75rem; color:var(--muted)}
 .legend i{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px}
+/* ---- Lang toggle ---- */
+.rightctrls{display:flex; align-items:center; gap:8px}
+.langtog{display:inline-flex; border:1px solid #2c4459; border-radius:999px; overflow:hidden}
+.langtog button{background:var(--card); border:none; color:var(--muted); font-weight:800; font-size:.72rem; letter-spacing:.06em; padding:6px 11px}
+.langtog button.on{background:var(--accent); color:#06141d}
 /* ---- Admin ---- */
 .titlerow{display:flex; align-items:flex-start; justify-content:space-between; gap:10px}
 #adminBtn{background:none; border:none; font-size:1.25rem; color:var(--muted); padding:2px 4px}
@@ -218,8 +223,14 @@ section{padding:14px 16px 0}
 
 <header>
   <div class="titlerow">
-    <h1>Allergi Guide <small id="updated"></small></h1>
-    <button id="adminBtn" title="Administrér menu">⚙️</button>
+    <h1><span id="appTitle">Allergi Guide</span> <small id="updated"></small></h1>
+    <div class="rightctrls">
+      <div class="langtog" id="langtog">
+        <button type="button" data-l="da">DA</button>
+        <button type="button" data-l="en">EN</button>
+      </div>
+      <button id="adminBtn" title="Administrér menu">⚙️</button>
+    </div>
   </div>
   <div class="search">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
@@ -229,27 +240,18 @@ section{padding:14px 16px 0}
 </header>
 
 <section>
-  <div class="label">Gæstens allergier – vælg én eller flere</div>
+  <div class="label" id="chipsLabel">Gæstens allergier – vælg én eller flere</div>
   <div class="chips" id="achips"></div>
 </section>
 
 <div class="catbar" id="catbar"></div>
 
-<div class="legend">
-  <span><i style="background:var(--green)"></i>Kan spises</span>
-  <span><i style="background:var(--orange)"></i>Kan tilpasses</span>
-  <span><i style="background:var(--yellow)"></i>Spor af – advar gæsten</span>
-  <span><i style="background:var(--grey)"></i>Ukendt – spørg køkkenet</span>
-  <span><i style="background:var(--red)"></i>Kan ikke spises</span>
-</div>
+<div class="legend" id="legend"></div>
 
 <div id="summary"></div>
 <main id="results"></main>
 
-<div class="foot">
-  Baseret på de 14 lovpligtige EU-allergener (forordning 1169/2011, bilag II).<br>
-  Kun retter markeret <b>“Nej”</b> i matrixen vises som grønne. Ved tvivl: spørg altid køkkenet.
-</div>
+<div class="foot" id="footnote"></div>
 
 <div id="overlay"></div>
 <div id="sheet"></div>
@@ -260,14 +262,97 @@ section{padding:14px 16px 0}
 </div>
 
 <script>
-/* ====== DATA (genereret fra Allergi-Matrix CSV) ====== */
+/* ====== DATA (genereret fra Allergi-Matrix CSV) – RØRES IKKE af sprog-toggle ====== */
 const ALLERGENS = ["Gluten", "Laktose", "Nødder", "Æg", "Krebsdyr", "Fisk", "Jordnødder", "Soja", "Selleri", "Sesamfrø", "Lupin", "Sulfitter", "Bløddyr", "Sennep"];
 const DISHES = [{"n":"Meyers ølandshvede brød","k":"Øvrige","a":[1,0,0,0,0,0,0,0,0,2,0,0,0,0]},{"n":"Hønsesalat ( KUN HØNSESALATEN )","k":"Øvrige","a":[0,1,0,1,0,1,0,0,0,0,0,0,0,1]},{"n":"Blåbær yoghurt ( KUN YOGHURT! )","k":"Øvrige","a":[0,1,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Porre tærte BRUNCHBUFFET","k":"Øvrige","a":[1,1,2,1,2,2,2,2,1,0,0,0,2,0]},{"n":"Ærte spread","k":"Øvrige","a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Stegt flæsk","k":"Aften retter","a":[1,1,0,0,0,0,0,0,0,0,0,0,0,0],"m":{"0":"Servere uden sauce","1":"Servere uden sauce & sig til køkkenet de ikke skal vende kartoflerne i smør"}},{"n":"Black Angus med garniture","k":"Aften retter","a":[0,1,0,1,0,0,0,0,0,0,0,0,0,0],"m":{"1":"Servere uden bearnaise. Sig til køkken de skal stege uden smør","3":"Servere uden bearnaise"}},{"n":"Chili con carne","k":"Aften retter","a":[0,1,0,0,0,0,0,1,1,0,0,0,0,0]},{"n":"Okse mørbrad","k":"Aften retter","a":[0,1,0,1,0,0,0,0,0,0,0,0,0,0],"m":{"1":"Servere uden bearnaise. Sig til køkken de skal stege uden smør","3":"Servere uden bearnaise"}},{"n":"Wienerschnitzel","k":"Aften retter","a":[1,1,0,1,0,1,0,0,0,0,0,0,0,0],"m":{"5":"Kan laves uden fisk – servere uden 'dreng' (indeholder ansjoser)"}},{"n":"Ærte pasta med burrata","k":"Aften retter","a":[1,1,0,0,0,0,0,2,0,0,0,0,0,2]},{"n":"Rabarber crumble","k":"Aften retter","a":[1,1,2,0,0,0,0,0,0,0,0,0,0,0],"m":{"0":"Servere uden crumble","1":"Servere uden crumble","2":"Servere uden crumble"}},{"n":"Bagt torsk","k":"Aften retter","a":[0,1,0,1,0,1,0,0,0,0,0,0,0,1],"m":{"1":"Uden sauce, og sig til køkkenet, uden smør i kartofler","13":"Servere uden hollandaise","3":"Servere uden hollandaise"}},{"n":"Fiskefilet med remo","k":"Børneretter","a":[1,0,0,1,0,1,0,0,1,0,0,1,0,1]},{"n":"Børne burger","k":"Børneretter","a":[1,1,0,1,0,0,0,0,0,0,0,0,0,0],"m":{"0":"Servere i glutenfri bolle","1":"Servere i glutenfri bolle"}},{"n":"Nuggets med ketchup","k":"Børneretter","a":[1,1,0,1,0,0,0,0,1,0,0,0,0,0]},{"n":"Kaiser burger","k":"Burger","a":[1,1,0,1,0,0,0,0,0,2,0,1,0,0],"m":{"0":"Servere i glutenfri bolle","1":"Servere i glutenfri bolle & uden mayo","11":"Servere uden syltet agurker","3":"Servere uden mayo"}},{"n":"Mexikansk burger","k":"Burger","a":[1,1,0,1,0,0,0,0,0,2,0,0,0,0],"m":{"0":"Servere i glutenfri bolle","1":"Servere i glutenfri bolle","9":"Servere uden jalapeños","3":"Servere uden dressing"}},{"n":"Signatur burger","k":"Burger","a":[1,1,0,1,0,0,0,0,0,2,0,1,0,0],"m":{"0":"Servere i glutenfri bolle","1":"Servere uden dressing & i glutenfri bolle","11":"Servere uden dressing","3":"Servere uden dressing"}},{"n":"Bearnaise burger","k":"Burger","a":[1,1,0,1,0,0,0,0,0,2,0,1,0,0],"m":{"0":"Servere i glutenfri bolle & uden friteret løgringe","1":"Servere i glutenfri bolle & uden bearnaise","3":"Servere uden bearnaise & uden mayo"}},{"n":"Blåbær yoghurt","k":"Byg selv brunch","a":[1,1,1,0,0,0,2,0,0,0,0,0,0,0],"m":{"0":"Servere uden granola","6":"Servere uden granola","2":"Servere uden granola"}},{"n":"Røræg m. bacon & purløg","k":"Byg selv brunch","a":[0,1,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Chiagrød med mango","k":"Byg selv brunch","a":[0,1,2,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Spejlæg med purløg","k":"Byg selv brunch","a":[0,0,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Havarti med hjemmelavet jordbær syltetøj","k":"Byg selv brunch","a":[0,1,0,0,0,0,0,0,0,0,0,0,0,3]},{"n":"Mini rösti med trøffel & serrano skinke","k":"Byg selv brunch","a":[0,1,0,1,0,1,0,0,0,0,0,1,0,0],"m":{"11":"Servere uden trøffel mayo","3":"Servere uden trøffel mayo","5":"Servere uden trøffel mayo"}},{"n":"Hjemmelavet hønsesalat med bacon & tomat","k":"Byg selv brunch","a":[0,1,0,1,0,0,0,0,0,0,0,1,0,1]},{"n":"Avocado med hytteost med syltet rødløg & crispy chili","k":"Byg selv brunch","a":[0,1,0,0,0,0,0,1,0,0,0,1,0,0],"m":{"1":"Uden hytteost","7":"Uden crispy chili","11":"Uden syltet rødløg"}},{"n":"Cæsar salat","k":"Byg selv brunch","a":[1,1,2,1,0,1,0,0,0,0,0,1,0,1],"m":{"5":"Servere uden dressing, vi har ansjoser i vores dressing","0":"Servere uden croutoner","1":"Servere uden ost & dressing, vi har parmesan i vores dressing","2":"Uden dressing","13":"Uden dressing","11":"Uden dressing","3":"Uden dressing"}},{"n":"Frugt skål","k":"Byg selv brunch","a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Brunchpølser med ramsløg & æble","k":"Byg selv brunch","a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Crispy chicken med chili mayo","k":"Byg selv brunch","a":[1,0,0,1,0,0,0,0,1,0,0,1,0,0],"m":{"11":"Servere uden chili mayo","3":"Servere uden chili mayo"}},{"n":"Koldrøget laks med citron mayo & rugbrød","k":"Byg selv brunch","a":[1,0,2,1,0,1,0,0,1,2,0,1,0,1]},{"n":"Bananbite med limecreme & pistage","k":"Byg selv brunch","a":[1,1,1,0,0,0,0,1,0,0,0,1,0,0]},{"n":"Kaffe trifli med kaffe sirup","k":"Byg selv brunch","a":[1,1,1,1,0,0,0,1,0,0,0,0,0,0]},{"n":"Kanelsnurre med vegansk fløde & tørret kornblomst","k":"Byg selv brunch","a":[1,1,0,1,0,0,0,1,0,0,0,0,0,0]},{"n":"Croissaint","k":"Byg selv brunch","a":[1,1,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Ølands hvedetoast","k":"Byg selv brunch","a":[1,1,0,0,0,0,0,0,0,0,0,0,0,0],"m":{"1":"Servere uden ost & pesto"}},{"n":"Amerikanske pandekager","k":"Byg selv brunch","a":[1,1,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Pølser - BRUNCHBUFFET","k":"Byg selv brunch","a":[1,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Øllebrød - Brunchbræt","k":"Byg selv brunch","a":[1,0,2,0,0,0,2,0,0,0,0,0,0,0]},{"n":"Rabarber crumble - Brunchbræt","k":"Byg selv brunch","a":[1,1,2,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Jordbær kage Brunch byg selv","k":"Byg selv brunch","a":[1,1,1,1,0,0,0,2,0,0,0,0,0,0]},{"n":"Stracciatellaost med fersken byg selv brunch","k":"Byg selv brunch","a":[0,1,0,0,0,0,0,0,0,0,0,0,0,0],"m":{"1":"Servere uden ost"}},{"n":"Koldskål med kammerjunker - Byg selv brunch","k":"Byg selv brunch","a":[1,1,2,1,0,0,2,0,0,0,0,0,0,0],"m":{"3":"Servere uden trøffel mayo"}},{"n":"Meyers chokolade brownie","k":"Desserter","a":[1,1,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Brownie med chokolade mousse & bær kompot","k":"Desserter","a":[1,1,0,1,0,0,0,1,0,0,0,0,0,3]},{"n":"Pandekager med vanilje is","k":"Desserter","a":[1,1,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Æblekage ( Kageskab )","k":"Desserter","a":[1,1,2,1,0,0,0,2,0,0,0,0,0,0]},{"n":"Trøffelkugler med saltkaramel","k":"Desserter","a":[1,1,1,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Hindbær Domé ( Kageskab )","k":"Desserter","a":[1,1,1,1,0,0,2,0,0,0,0,0,0,0]},{"n":"Gulerodskage - KAGESKAB","k":"Desserter","a":[1,1,1,1,0,0,0,2,0,0,0,0,0,0]},{"n":"Prag ckokoladekage - Kageskab","k":"Desserter","a":[1,1,2,1,0,0,0,1,0,2,2,0,0,0]},{"n":"Hvidløgs mayo","k":"Dips","a":[0,0,0,1,0,0,0,0,0,0,0,1,0,0]},{"n":"Chili mayo","k":"Dips","a":[0,0,0,1,0,0,0,0,0,0,0,1,0,0]},{"n":"Remolaude","k":"Dips","a":[1,0,0,1,0,0,0,0,0,0,0,1,0,1]},{"n":"Ketchup","k":"Dips","a":[0,0,0,0,0,0,0,0,0,0,0,1,0,0]},{"n":"Cæsar mayo","k":"Dips","a":[0,1,0,1,0,1,0,0,0,0,0,1,0,0]},{"n":"Honning/senneps dressing ( Lakse salat )","k":"Dips","a":[0,0,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Pesto","k":"Dips","a":[0,1,1,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Signatur dressing","k":"Dips","a":[0,1,0,1,0,0,0,0,0,0,0,1,0,1]},{"n":"Trøffel mayo","k":"Dips","a":[0,0,0,1,0,1,0,0,0,0,0,1,0,0],"note":"OBS: Trøffelpastaen indeholder ansjoser (fisk) for at styrke smagen."},{"n":"Karry dressing","k":"Dips","a":[0,1,0,1,0,0,0,0,0,0,0,1,0,0]},{"n":"Sauce tatar","k":"Dips","a":[0,1,0,1,0,0,0,0,0,0,0,1,0,1]},{"n":"Citron mayo","k":"Dips","a":[0,0,0,1,0,0,0,0,0,0,0,0,0,1]},{"n":"1000 island (Stjerneskud)","k":"Dips","a":[0,0,0,1,0,0,0,0,0,0,0,0,0,1]},{"n":"Bearnaise sauce","k":"Dips","a":[0,0,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Persille sovs til flæsk","k":"Dips","a":[1,1,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Brun sauce ( Wienersnitzel )","k":"Dips","a":[0,1,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Peber sauce","k":"Dips","a":[0,1,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Fish and chips","k":"Lune retter","a":[1,1,0,1,0,1,0,0,0,0,0,1,0,1]},{"n":"Stjerneskud","k":"Lune retter","a":[1,1,0,1,1,1,0,0,0,0,0,1,0,0]},{"n":"Pariserbøf","k":"Lune retter","a":[1,1,0,1,0,0,0,0,0,0,0,0,0,1],"m":{"0":"Glutenfrit brød & servere uden pickles, det indeholder gluten","3":"Uden æggeblomme","13":"Servere uden pickles"}},{"n":"Kyllingwrap","k":"Lune retter","a":[1,1,0,1,0,0,0,0,0,0,0,1,0,0]},{"n":"Ostemad","k":"Morgenmad","a":[1,1,0,0,0,0,0,0,0,2,0,0,0,0],"m":{"0":"Glutenfrit brød"}},{"n":"Røræg BRUNCH BUFFET","k":"Morgenmad","a":[0,1,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Bacon BRUNCH BUFFET","k":"Morgenmad","a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Pølser BRUNCH BUFFET","k":"Morgenmad","a":[1,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Crispy chicken med citron & rosmarin BRUNCHBUFFET","k":"Morgenmad","a":[1,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Hashbrowns med løg - BRUNCH BUFFET","k":"Morgenmad","a":[2,2,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Pandekager BRUNCH BUFFET","k":"Morgenmad","a":[1,1,2,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Vafler BRUNCH BUFFET","k":"Morgenmad","a":[1,1,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Chokolademousse med crumble BRUNCH BUFFET","k":"Morgenmad","a":[1,1,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Chiagrød med mango BRUNCH BUFFET","k":"Morgenmad","a":[0,1,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Saltkaramel kage BRUNCH BUFFET","k":"Morgenmad","a":[1,1,2,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Tunmousse","k":"Morgenmad","a":[0,1,0,1,0,0,0,0,0,0,0,0,0,1]},{"n":"Røræg BUFFET","k":"Morgenmad","a":[0,1,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Bacon - BUFFET","k":"Morgenmad","a":[0,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Crispy chicken - BUFFET","k":"Morgenmad","a":[1,0,0,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Cæsar salat","k":"Salater","a":[1,1,2,1,0,1,0,0,0,0,0,1,0,1],"m":{"5":"Servere uden dressing, vi har ansjoser i vores dressing","0":"Servere uden croutoner","1":"Servere uden dressing, vi har parmesan i vores dressing","13":"Servere uden dressing","11":"Servere uden dressing","3":"Servere uden dressing"}},{"n":"Pokebowl","k":"Salater","a":[1,0,1,0,0,0,1,1,0,1,0,1,0,0]},{"n":"Lakse salat","k":"Salater","a":[0,0,0,1,0,1,0,0,0,0,0,0,0,1]},{"n":"Kylling sandwich","k":"Sandwich","a":[1,1,0,1,0,0,0,0,1,0,0,1,0,0],"m":{"0":"Servere i glutenfrit brød","1":"Servere i glutenfrit brød & uden dressing","11":"Servere uden dressing","3":"Servere uden dressing"}},{"n":"Oksemørbrad sandwich","k":"Sandwich","a":[1,1,0,1,0,1,0,0,0,0,0,1,0,0],"m":{"0":"Glutenfrit brød","1":"Servere uden ost og blødeløg","11":"Servere uden dressing + dip til fritter","3":"Servere uden dressing & ost samt dip til fritter"},"note":"Indeholder fisk pga. trøffel mayoen."},{"n":"Tunmousse sandwich","k":"Sandwich","a":[1,1,0,1,0,1,0,0,0,0,0,1,0,0],"m":{"0":"Glutenfrit brød"}},{"n":"Serrano sandwich","k":"Sandwich","a":[1,1,1,0,0,0,0,0,0,0,0,0,0,0]},{"n":"Fiskefilet med remo","k":"Smørrebrød","a":[1,1,0,1,0,1,0,0,0,2,0,1,0,1]},{"n":"Æg & rejer","k":"Smørrebrød","a":[1,1,0,1,1,0,0,0,0,2,0,1,0,0],"m":{"0":"Servere på Glutenfrit brød"}},{"n":"Roastbeef","k":"Smørrebrød","a":[1,1,0,1,0,0,0,0,0,2,0,1,0,1],"m":{"3":"Servere uden æg – mayo kan beholdes"}},{"n":"Hakkebøf med blødeløg & spejlæg","k":"Smørrebrød","a":[1,1,0,1,0,0,0,0,0,2,0,0,0,3],"m":{"0":"Servere på glutenfrit brød","1":"Servere uden blødeløg","3":"Servere uden spejlæg"}},{"n":"Hønsesalat med bacon","k":"Smørrebrød","a":[1,1,0,1,0,0,0,0,0,2,0,1,0,1],"m":{"0":"Servere på glutenfrit brød"}},{"n":"Nachos","k":"Snacks","a":[0,1,0,0,0,0,0,2,0,0,0,0,0,0],"m":{"1":"Servere uden ost & cremefraiche"}},{"n":"Pommes med hvidløg mayo & ketchup","k":"Snacks","a":[0,0,0,1,0,0,0,0,0,0,0,0,0,0]},{"n":"Snack kurv med chili mayo","k":"Snacks","a":[1,1,0,1,0,0,0,0,1,0,0,1,0,0]},{"n":"Kartoffel smørrebrød","k":"Smørrebrød","a":[1,1,0,1,0,0,0,0,0,2,0,1,0,1]},{"n":"Laksesandwich","k":"Sandwich","a":[1,0,0,1,0,1,0,0,0,0,0,1,0,1]},{"n":"Jordbær kage a la carte","k":"Desserter","a":[1,1,1,1,0,0,0,2,0,0,0,0,0,0]}];
 const UPDATED = "11/06-2026";
 /* værdier: 0=Nej, 1=Ja, 2=Spor af, 3=Ukendt */
 
-const VAL = {0:"nej",1:"ja",2:"spor",3:"ukendt"};
-const VALTXT = {0:"Nej",1:"JA",2:"Spor af",3:"Ukendt"};
+/* ====== i18n (kun visning – rører ALDRIG data ovenfor) ====== */
+const ALLERGENS_EN = ["Gluten","Lactose","Tree nuts","Egg","Crustaceans","Fish","Peanuts","Soy","Celery","Sesame","Lupin","Sulphites","Molluscs","Mustard"];
+const VALTXT_DA = {0:"Nej",1:"JA",2:"Spor af",3:"Ukendt"};
+const VALTXT_EN = {0:"No",1:"YES",2:"Traces",3:"Unknown"};
+const VAL = {0:"nej",1:"ja",2:"spor",3:"ukendt"}; // css-klasser, sprog-uafhængige
+
+const T = {
+  da:{
+    appTitle:"Allergi Guide", updated:"Opdateret ",
+    searchPh:"Søg ret…", chipsLabel:"Gæstens allergier – vælg én eller flere",
+    adminTitle:"Administrér menu",
+    legend:["Kan spises","Kan tilpasses","Spor af – advar gæsten","Ukendt – spørg køkkenet","Kan ikke spises"],
+    foot1:"Baseret på de 14 lovpligtige EU-allergener (forordning 1169/2011, bilag II).",
+    foot2:'Kun retter markeret <b>“Nej”</b> i matrixen vises som grønne. Ved tvivl: spørg altid køkkenet.',
+    all:"Alle", empty:"Ingen retter matcher søgningen.",
+    sumAllergy:"Allergi:", sumEat:"kan spises", sumMod:"kan tilpasses",
+    gh:["✅ Kan spises","🔧 Kan tilpasses","⚠️ Spor af – advar gæsten","❓ Ukendt – spørg køkkenet","⛔ Kan ikke spises"],
+    whyContains:"Indeholder: ", whyMod:"Kan tilpasses: ", whyTrace:"Spor af: ", whyUnknown:"Ukendt: ", whyFree:"Fri for valgte allergener",
+    stillTrace:"⚠️ Har stadig spor af: ", unknownFor:"❓ Ukendt for: ", askKitchenShort:" – spørg køkkenet",
+    vRed:"⛔ Kan IKKE serveres", vMod:"🔧 Kan serveres med tilpasning",
+    vModStillTrace:"⚠️ Har stadig spor af: ", vModWarnGuest:" – advar gæsten.",
+    vModUnknown:"❓ Ukendt for: ", vModAskKitchen:" – spørg køkkenet.",
+    vModRemember:"Husk at give besked til køkkenet ved bestilling.",
+    vYellowSmall:"Advar gæsten om risiko for krydskontaminering.",
+    vGreySmall:"Data mangler – spørg køkkenet før servering.",
+    vGreenFree:"✅ Fri for: ", vGreenSmall:"Iflg. allergen-matrixen. Ved tvivl: bekræft med køkkenet.",
+    possibleMods:"Mulige tilpasninger", all14:"Alle 14 allergener",
+    /* admin */
+    aSetup:"⚙️ Opsætning", aClose:"Luk",
+    aInfo:'For at kunne udgive ændringer til alle telefoner skal appen have adgang til dit GitHub-repo. Det gøres én gang, kun på din telefon.<br><br><b>Sådan laver du en nøgle:</b> GitHub → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token. Vælg KUN dit allergi-repo, og giv <b>Contents: Read and write</b>. Kopiér nøglen herind.',
+    aUser:"GitHub-brugernavn", aRepo:"Repo-navn", aToken:"Nøgle (token)", aSaveSetup:"Gem opsætning",
+    aManage:"⚙️ Administrér menu", aNew:"+ Opret ny ret", aKey:"Nøgle…", aSearch:"Søg…",
+    aShow:"Vis", aHide:"Skjul", aHidden:" · skjult", aEdit:"Redigér",
+    aNewDish:"Ny ret", aEditDish:"Redigér ret", aBack:"‹ Tilbage",
+    aName:"Navn", aCat:"Kategori", aNote:"Note (valgfri – vises på retten)",
+    aCycle:"Allergener – tryk for at skifte: Nej → Ja → Spor af → Ukendt",
+    aSaveDish:"Gem ret", aCancel:"Annullér", aReq:"⚠️ Navn og kategori skal udfyldes.",
+    aModPh:"Tilpasning (valgfri), fx 'Servere uden sovs'",
+    pubBtn:"Udgiv", pubBusy:"Udgiver…",
+    dirty1:"ændring", dirtyN:"ændringer", dirtyTail:" – ikke udgivet endnu. Tryk Udgiv for at opdatere alle telefoner.",
+    pubOk:"✅ Udgivet! Alle telefoner får ændringerne, næste gang appen åbnes.",
+    pubErr:"❌ Kunne ikke udgive: ", pubErrTail:"\nTjek nøgle og repo-navn under ⚙️ → Nøgle…"
+  },
+  en:{
+    appTitle:"Allergy Guide", updated:"Updated ",
+    searchPh:"Search dish…", chipsLabel:"Guest's allergies – select one or more",
+    adminTitle:"Manage menu",
+    legend:["Can eat","Can be adapted","Traces of – warn the guest","Unknown – ask the kitchen","Cannot eat"],
+    foot1:"Based on the 14 mandatory EU allergens (Regulation 1169/2011, Annex II).",
+    foot2:'Only dishes marked <b>“No”</b> in the matrix show as green. When in doubt, always ask the kitchen.',
+    all:"All", empty:"No dishes match your search.",
+    sumAllergy:"Allergies:", sumEat:"can eat", sumMod:"can be adapted",
+    gh:["✅ Can eat","🔧 Can be adapted","⚠️ Traces of – warn the guest","❓ Unknown – ask the kitchen","⛔ Cannot eat"],
+    whyContains:"Contains: ", whyMod:"Can be adapted: ", whyTrace:"Traces of: ", whyUnknown:"Unknown: ", whyFree:"Free from selected allergens",
+    stillTrace:"⚠️ Still has traces of: ", unknownFor:"❓ Unknown for: ", askKitchenShort:" – ask the kitchen",
+    vRed:"⛔ CANNOT be served", vMod:"🔧 Can be served with adaptation",
+    vModStillTrace:"⚠️ Still has traces of: ", vModWarnGuest:" – warn the guest.",
+    vModUnknown:"❓ Unknown for: ", vModAskKitchen:" – ask the kitchen.",
+    vModRemember:"Remember to tell the kitchen when ordering.",
+    vYellowSmall:"Warn the guest about the risk of cross-contamination.",
+    vGreySmall:"Data missing – ask the kitchen before serving.",
+    vGreenFree:"✅ Free from: ", vGreenSmall:"Per the allergen matrix. When in doubt, confirm with the kitchen.",
+    possibleMods:"Possible adaptations", all14:"All 14 allergens",
+    /* admin */
+    aSetup:"⚙️ Setup", aClose:"Close",
+    aInfo:'To publish changes to all phones, the app needs access to your GitHub repo. Done once, only on your phone.<br><br><b>How to make a key:</b> GitHub → Settings → Developer settings → Personal access tokens → <b>Fine-grained tokens</b> → Generate new token. Select ONLY your allergy repo and give <b>Contents: Read and write</b>. Paste the key here.',
+    aUser:"GitHub username", aRepo:"Repo name", aToken:"Key (token)", aSaveSetup:"Save setup",
+    aManage:"⚙️ Manage menu", aNew:"+ Create new dish", aKey:"Key…", aSearch:"Search…",
+    aShow:"Show", aHide:"Hide", aHidden:" · hidden", aEdit:"Edit",
+    aNewDish:"New dish", aEditDish:"Edit dish", aBack:"‹ Back",
+    aName:"Name", aCat:"Category", aNote:"Note (optional – shown on the dish)",
+    aCycle:"Allergens – tap to cycle: No → Yes → Traces → Unknown",
+    aSaveDish:"Save dish", aCancel:"Cancel", aReq:"⚠️ Name and category are required.",
+    aModPh:"Adaptation (optional), e.g. 'Serve without sauce'",
+    pubBtn:"Publish", pubBusy:"Publishing…",
+    dirty1:"change", dirtyN:"changes", dirtyTail:" – not published yet. Tap Publish to update all phones.",
+    pubOk:"✅ Published! All phones get the changes next time the app opens.",
+    pubErr:"❌ Could not publish: ", pubErrTail:"\nCheck key and repo name under ⚙️ → Key…"
+  }
+};
+
+let LANG = localStorage.getItem("kaiser_allergi_lang") || "da";
+const t = k => (T[LANG][k] ?? T.da[k] ?? "");
+const AL = () => LANG === "en" ? ALLERGENS_EN : ALLERGENS;   // display names (index-aligned with ALLERGENS)
+const VALTXT = () => LANG === "en" ? VALTXT_EN : VALTXT_DA;
 
 /* DATA = levende datasæt. Indlejret data er fallback;
    dishes.json hentes ved hver åbning, så alle telefoner følger med. */
@@ -277,9 +362,24 @@ const live = () => DATA.dishes.filter(d => !d.h);
 let selAll = new Set();   // valgte allergener (index)
 let selCat = "";          // valgt kategori
 let query = "";
+let lastSheetDish = null;
 
-function setUpdatedLabel(){ document.getElementById("updated").textContent = "Opdateret " + DATA.updated; }
-setUpdatedLabel();
+function setUpdatedLabel(){ document.getElementById("updated").textContent = t("updated") + DATA.updated; }
+
+/* ---- static UI text per language ---- */
+function applyStaticLang(){
+  document.documentElement.lang = LANG;
+  document.getElementById("appTitle").textContent = t("appTitle");
+  document.getElementById("chipsLabel").textContent = t("chipsLabel");
+  document.getElementById("q").placeholder = t("searchPh");
+  document.getElementById("adminBtn").title = t("adminTitle");
+  setUpdatedLabel();
+  const legColors = ["var(--green)","var(--orange)","var(--yellow)","var(--grey)","var(--red)"];
+  document.getElementById("legend").innerHTML =
+    t("legend").map((txt,i)=>`<span><i style="background:${legColors[i]}"></i>${txt}</span>`).join("");
+  document.getElementById("footnote").innerHTML = t("foot1") + "<br>" + t("foot2");
+  document.querySelectorAll("#langtog button").forEach(b=>b.classList.toggle("on", b.dataset.l===LANG));
+}
 
 fetch("dishes.json?v=" + Date.now())
   .then(r => r.ok ? r.json() : null)
@@ -291,14 +391,17 @@ fetch("dishes.json?v=" + Date.now())
 
 /* ---- allergen-chips ---- */
 const achips = document.getElementById("achips");
-ALLERGENS.forEach((a,i)=>{
-  const b = document.createElement("button");
-  b.className = "chip"; b.textContent = a;
-  b.onclick = ()=>{ selAll.has(i) ? selAll.delete(i) : selAll.add(i); b.classList.toggle("on"); render(); };
-  achips.appendChild(b);
-});
+function buildChips(){
+  achips.innerHTML = "";
+  AL().forEach((a,i)=>{
+    const b = document.createElement("button");
+    b.className = "chip" + (selAll.has(i) ? " on" : ""); b.textContent = a;
+    b.onclick = ()=>{ selAll.has(i) ? selAll.delete(i) : selAll.add(i); b.classList.toggle("on"); render(); };
+    achips.appendChild(b);
+  });
+}
 
-/* ---- kategori-bar ---- */
+/* ---- kategori-bar (kategori-navne er data → altid som gemt) ---- */
 const catbar = document.getElementById("catbar");
 function buildCats(){
   catbar.innerHTML = "";
@@ -310,45 +413,35 @@ function buildCats(){
     b.onclick = ()=>{ selCat=val; buildCats(); render(); };
     catbar.appendChild(b);
   };
-  mk("Alle","");
+  mk(t("all"),"");
   cats.forEach(c=>mk(c,c));
 }
-buildCats();
 
 /* ---- søgning ---- */
 const qEl = document.getElementById("q"), qClear = document.getElementById("qclear");
 qEl.addEventListener("input", ()=>{ query = qEl.value.trim().toLowerCase(); qClear.style.display = query?"block":"none"; render(); });
 qClear.onclick = ()=>{ qEl.value=""; query=""; qClear.style.display="none"; render(); qEl.blur(); };
 
-/* ---- klassificering ----
-   For valgte allergener: værste værdi afgør gruppen.
-   "Ja" UDEN tilpasning = rød. "Ja" MED tilpasning = orange (kan tilpasses).
-   Spor af = gul (evt. med tilpasningstip). Ukendt = grå.
-   Kun "nej" på ALLE valgte = grøn. */
+/* ---- klassificering (data-drevet; kun why-teksterne er sproglige) ---- */
 function classify(d){
   if (selAll.size === 0) return {grp:"none"};
   let ja=[], fixes=[], spor=[], ukendt=[], tips=[];
+  const names = AL();
   for (const i of selAll){
     const v = d.a[i], m = d.m && d.m[i];
-    if (v===1){ m ? fixes.push([i,m]) : ja.push(ALLERGENS[i]); }
-    else if (v===2){ spor.push(ALLERGENS[i]); if (m) tips.push([i,m]); }
-    else if (v===3) ukendt.push(ALLERGENS[i]);
+    if (v===1){ m ? fixes.push([i,m]) : ja.push(names[i]); }
+    else if (v===2){ spor.push(names[i]); if (m) tips.push([i,m]); }
+    else if (v===3) ukendt.push(names[i]);
   }
-  if (ja.length)     return {grp:"red",    why:"Indeholder: "+ja.join(", ")};
-  if (fixes.length)  return {grp:"mod",    why:"Kan tilpasses: "+fixes.map(f=>ALLERGENS[f[0]]).join(", "), fixes, spor, ukendt, tips};
-  if (spor.length)   return {grp:"yellow", why:"Spor af: "+spor.join(", "), tips};
-  if (ukendt.length) return {grp:"grey",   why:"Ukendt: "+ukendt.join(", ")};
-  return {grp:"green", why:"Fri for valgte allergener"};
+  if (ja.length)     return {grp:"red",    why:t("whyContains")+ja.join(", ")};
+  if (fixes.length)  return {grp:"mod",    why:t("whyMod")+fixes.map(f=>names[f[0]]).join(", "), fixes, spor, ukendt, tips};
+  if (spor.length)   return {grp:"yellow", why:t("whyTrace")+spor.join(", "), tips};
+  if (ukendt.length) return {grp:"grey",   why:t("whyUnknown")+ukendt.join(", ")};
+  return {grp:"green", why:t("whyFree")};
 }
 
 /* ---- render ---- */
-const GROUPS = [
-  ["green","✅ Kan spises"],
-  ["mod","🔧 Kan tilpasses"],
-  ["yellow","⚠️ Spor af – advar gæsten"],
-  ["grey","❓ Ukendt – spørg køkkenet"],
-  ["red","⛔ Kan ikke spises"]
-];
+const GROUP_KEYS = ["green","mod","yellow","grey","red"];
 
 function render(){
   const res = document.getElementById("results");
@@ -362,8 +455,7 @@ function render(){
 
   if (selAll.size === 0){
     sum.style.display = "none";
-    if (!list.length){ res.innerHTML = '<div class="empty">Ingen retter matcher søgningen.</div>'; return; }
-    // uden valgte allergier: vis liste pr. kategori
+    if (!list.length){ res.innerHTML = `<div class="empty">${t("empty")}</div>`; return; }
     const byCat = {};
     list.forEach(d=>{ (byCat[d.k] = byCat[d.k]||[]).push(d); });
     for (const c of Object.keys(byCat)){
@@ -379,33 +471,34 @@ function render(){
   list.forEach(d=>{ const r = classify(d); buckets[r.grp].push([d,r]); });
 
   sum.style.display = "block";
-  sum.innerHTML = `Allergi: <b>${[...selAll].map(i=>ALLERGENS[i]).join(", ")}</b> &nbsp;·&nbsp; <b>${buckets.green.length}</b> kan spises &nbsp;·&nbsp; <b>${buckets.mod.length}</b> kan tilpasses`;
+  sum.innerHTML = `${t("sumAllergy")} <b>${[...selAll].map(i=>AL()[i]).join(", ")}</b> &nbsp;·&nbsp; <b>${buckets.green.length}</b> ${t("sumEat")} &nbsp;·&nbsp; <b>${buckets.mod.length}</b> ${t("sumMod")}`;
 
   let any = false;
-  for (const [key,title] of GROUPS){
-    if (!buckets[key].length) continue;
+  GROUP_KEYS.forEach((key,gi)=>{
+    if (!buckets[key].length) return;
     any = true;
     const g = document.createElement("div"); g.className = "group g-"+key;
-    g.innerHTML = `<div class="group-h">${title} <span class="badge">${buckets[key].length}</span></div>`;
+    g.innerHTML = `<div class="group-h">${t("gh")[gi]} <span class="badge">${buckets[key].length}</span></div>`;
     buckets[key].forEach(([d,r])=> g.appendChild(card(d,r)));
     res.appendChild(g);
-  }
-  if (!any) res.innerHTML = '<div class="empty">Ingen retter matcher søgningen.</div>';
+  });
+  if (!any) res.innerHTML = `<div class="empty">${t("empty")}</div>`;
 }
 
 function card(d, r){
   const b = document.createElement("button");
   b.className = "dish";
+  const names = AL();
   let extra = "";
   if (r && r.grp==="mod"){
     extra = `<div class="fixes">` +
-      r.fixes.map(([i,m])=>`<div class="fix"><b>${ALLERGENS[i]}:</b> ${m}</div>`).join("") +
-      (r.spor.length ? `<div class="tip">⚠️ Har stadig spor af: ${r.spor.join(", ")}</div>` : "") +
-      (r.ukendt.length ? `<div class="tip">❓ Ukendt for: ${r.ukendt.join(", ")} – spørg køkkenet</div>` : "") +
+      r.fixes.map(([i,m])=>`<div class="fix"><b>${names[i]}:</b> ${m}</div>`).join("") +
+      (r.spor.length ? `<div class="tip">${t("stillTrace")}${r.spor.join(", ")}</div>` : "") +
+      (r.ukendt.length ? `<div class="tip">${t("unknownFor")}${r.ukendt.join(", ")}${t("askKitchenShort")}</div>` : "") +
       `</div>`;
   } else if (r && r.grp==="yellow" && r.tips && r.tips.length){
     extra = `<div class="fixes">` +
-      r.tips.map(([i,m])=>`<div class="tip"><b>${ALLERGENS[i]}:</b> ${m}</div>`).join("") + `</div>`;
+      r.tips.map(([i,m])=>`<div class="tip"><b>${names[i]}:</b> ${m}</div>`).join("") + `</div>`;
   }
   b.innerHTML = `<div class="nm"><div class="t">${d.n}</div><div class="c">${d.k}</div></div>` +
                 (r && r.grp!=="none" ? `<div class="why">${r.why}</div>` : "") + extra;
@@ -416,55 +509,72 @@ function card(d, r){
 /* ---- detalje-sheet ---- */
 const overlay = document.getElementById("overlay"), sheet = document.getElementById("sheet");
 function openSheet(d){
+  lastSheetDish = d;
   const r = classify(d);
+  const names = AL();
   let verdict = "";
   if (selAll.size){
-    const names = [...selAll].map(i=>ALLERGENS[i]).join(", ");
-    if (r.grp==="red")    verdict = `<div class="verdict v-red">⛔ Kan IKKE serveres<small>${r.why}</small></div>`;
+    const sel = [...selAll].map(i=>names[i]).join(", ");
+    if (r.grp==="red")    verdict = `<div class="verdict v-red">${t("vRed")}<small>${r.why}</small></div>`;
     if (r.grp==="mod"){
-      verdict = `<div class="verdict v-mod">🔧 Kan serveres med tilpasning` +
-        r.fixes.map(([i,m])=>`<div class="vfix"><b>${ALLERGENS[i]}:</b> ${m}</div>`).join("") +
-        (r.spor.length ? `<div class="vfix">⚠️ Har stadig spor af: ${r.spor.join(", ")} – advar gæsten.</div>` : "") +
-        (r.ukendt.length ? `<div class="vfix">❓ Ukendt for: ${r.ukendt.join(", ")} – spørg køkkenet.</div>` : "") +
-        `<small>Husk at give besked til køkkenet ved bestilling.</small></div>`;
+      verdict = `<div class="verdict v-mod">${t("vMod")}` +
+        r.fixes.map(([i,m])=>`<div class="vfix"><b>${names[i]}:</b> ${m}</div>`).join("") +
+        (r.spor.length ? `<div class="vfix">${t("vModStillTrace")}${r.spor.join(", ")}${t("vModWarnGuest")}</div>` : "") +
+        (r.ukendt.length ? `<div class="vfix">${t("vModUnknown")}${r.ukendt.join(", ")}${t("vModAskKitchen")}</div>` : "") +
+        `<small>${t("vModRemember")}</small></div>`;
     }
-    if (r.grp==="yellow") verdict = `<div class="verdict v-yellow">⚠️ ${r.why}<small>Advar gæsten om risiko for krydskontaminering.</small>` +
-        (r.tips && r.tips.length ? r.tips.map(([i,m])=>`<div class="vfix"><b>${ALLERGENS[i]}:</b> ${m}</div>`).join("") : "") + `</div>`;
-    if (r.grp==="grey")   verdict = `<div class="verdict v-grey">❓ ${r.why}<small>Data mangler – spørg køkkenet før servering.</small></div>`;
-    if (r.grp==="green")  verdict = `<div class="verdict v-green">✅ Fri for: ${names}<small>Iflg. allergen-matrixen. Ved tvivl: bekræft med køkkenet.</small></div>`;
+    if (r.grp==="yellow") verdict = `<div class="verdict v-yellow">${r.why}<small>${t("vYellowSmall")}</small>` +
+        (r.tips && r.tips.length ? r.tips.map(([i,m])=>`<div class="vfix"><b>${names[i]}:</b> ${m}</div>`).join("") : "") + `</div>`;
+    if (r.grp==="grey")   verdict = `<div class="verdict v-grey">${r.why}<small>${t("vGreySmall")}</small></div>`;
+    if (r.grp==="green")  verdict = `<div class="verdict v-green">${t("vGreenFree")}${sel}<small>${t("vGreenSmall")}</small></div>`;
   }
   let allMods = "";
   if (d.m){
     const keys = Object.keys(d.m);
-    allMods = `<div class="label" style="margin:16px 0 8px">Mulige tilpasninger</div>` +
-      keys.map(k=>`<div class="fix" style="margin-bottom:5px"><b>${ALLERGENS[k]}:</b> ${d.m[k]}</div>`).join("");
+    allMods = `<div class="label" style="margin:16px 0 8px">${t("possibleMods")}</div>` +
+      keys.map(k=>`<div class="fix" style="margin-bottom:5px"><b>${names[k]}:</b> ${d.m[k]}</div>`).join("");
   }
   let cells = "";
-  ALLERGENS.forEach((a,i)=>{
+  const vt = VALTXT();
+  names.forEach((a,i)=>{
     const v = d.a[i];
-    cells += `<div class="cell c-${VAL[v]} ${selAll.has(i)?"hl":""}"><span>${a}</span><span>${VALTXT[v]}</span></div>`;
+    cells += `<div class="cell c-${VAL[v]} ${selAll.has(i)?"hl":""}"><span>${a}</span><span>${vt[v]}</span></div>`;
   });
   const note = d.note ? `<div class="tip" style="margin-bottom:14px">ℹ️ ${d.note}</div>` : "";
   sheet.innerHTML = `<div class="grab"></div><button class="close-x" id="shx">✕</button>
     <h2>${d.n}</h2><div class="scat">${d.k}</div>${note}${verdict}
-    <div class="label" style="margin-bottom:8px">Alle 14 allergener</div>
+    <div class="label" style="margin-bottom:8px">${t("all14")}</div>
     <div class="matrix">${cells}</div>${allMods}`;
   document.getElementById("shx").onclick = closeSheet;
   overlay.classList.add("open"); sheet.classList.add("open");
 }
-function closeSheet(){ overlay.classList.remove("open"); sheet.classList.remove("open"); }
+function closeSheet(){ overlay.classList.remove("open"); sheet.classList.remove("open"); lastSheetDish = null; }
 overlay.onclick = closeSheet;
 
+/* ---- language toggle ---- */
+document.getElementById("langtog").addEventListener("click", e=>{
+  const b = e.target.closest("button"); if(!b) return;
+  LANG = b.dataset.l;
+  try{ localStorage.setItem("kaiser_allergi_lang", LANG); }catch(_){}
+  applyStaticLang();
+  buildChips();
+  buildCats();
+  render();
+  if (overlay.classList.contains("open") && lastSheetDish) openSheet(lastSheetDish);
+  if (adminEl.classList.contains("open")) viewList();
+});
+
+/* ---- init visning ---- */
+applyStaticLang();
+buildChips();
+buildCats();
 render();
 
-/* ================= ADMIN =================
-   Opret/redigér/skjul retter direkte i appen.
-   "Udgiv" skriver dishes.json til GitHub-repoet via API,
-   så alle telefoner får ændringen ved næste åbning. */
+/* ================= ADMIN ================= */
 const adminEl = document.getElementById("admin");
 const pubbar = document.getElementById("pubbar"), pubinfo = document.getElementById("pubinfo"), pubbtn = document.getElementById("pubbtn");
 let dirty = 0;
-let editIdx = null; // index i DATA.dishes, null = ny ret
+let editIdx = null;
 
 const cfg = {
   get owner(){ return localStorage.gh_owner || autoOwner(); },
@@ -488,21 +598,18 @@ function closeAdmin(){ adminEl.classList.remove("open"); buildCats(); render(); 
 function markDirty(){
   dirty++;
   pubbar.classList.add("show");
-  pubinfo.textContent = dirty + " ændring" + (dirty>1?"er":"") + " – ikke udgivet endnu. Tryk Udgiv for at opdatere alle telefoner.";
+  pubbtn.textContent = t("pubBtn");
+  pubinfo.textContent = dirty + " " + (dirty>1?t("dirtyN"):t("dirty1")) + t("dirtyTail");
 }
 
-/* ---- opsætning ---- */
 function viewSetup(){
   adminEl.innerHTML = `
-    <div class="ahead"><h2>⚙️ Opsætning</h2><button class="btn btn-sm" id="adX">Luk</button></div>
-    <div class="ainfo">For at kunne udgive ændringer til alle telefoner skal appen have adgang til dit GitHub-repo.
-    Det gøres én gang, kun på din telefon.<br><br>
-    <b>Sådan laver du en nøgle:</b> GitHub → Settings → Developer settings → Personal access tokens →
-    <b>Fine-grained tokens</b> → Generate new token. Vælg KUN dit allergi-repo, og giv <b>Contents: Read and write</b>. Kopiér nøglen herind.</div>
-    <div class="field"><label>GitHub-brugernavn</label><input type="text" id="fOwner" value="${cfg.owner}" autocapitalize="off"></div>
-    <div class="field"><label>Repo-navn</label><input type="text" id="fRepo" value="${cfg.repo}" autocapitalize="off"></div>
-    <div class="field"><label>Nøgle (token)</label><input type="password" id="fToken" value="${cfg.token}" autocapitalize="off"></div>
-    <button class="btn btn-primary" id="adSave">Gem opsætning</button>
+    <div class="ahead"><h2>${t("aSetup")}</h2><button class="btn btn-sm" id="adX">${t("aClose")}</button></div>
+    <div class="ainfo">${t("aInfo")}</div>
+    <div class="field"><label>${t("aUser")}</label><input type="text" id="fOwner" value="${cfg.owner}" autocapitalize="off"></div>
+    <div class="field"><label>${t("aRepo")}</label><input type="text" id="fRepo" value="${cfg.repo}" autocapitalize="off"></div>
+    <div class="field"><label>${t("aToken")}</label><input type="password" id="fToken" value="${cfg.token}" autocapitalize="off"></div>
+    <button class="btn btn-primary" id="adSave">${t("aSaveSetup")}</button>
     <div class="astatus" id="setupStatus"></div>`;
   document.getElementById("adX").onclick = closeAdmin;
   document.getElementById("adSave").onclick = ()=>{
@@ -513,30 +620,23 @@ function viewSetup(){
   };
 }
 
-/* ---- liste ---- */
 function viewList(filter=""){
-  const rows = DATA.dishes.map((d,i)=>({d,i}))
-    .filter(x=>!filter || x.d.n.toLowerCase().includes(filter))
-    .sort((a,b)=> a.d.k.localeCompare(b.d.k,"da") || a.d.n.localeCompare(b.d.n,"da"));
   adminEl.innerHTML = `
-    <div class="ahead"><h2>⚙️ Administrér menu</h2><button class="btn btn-sm" id="adX">Luk</button></div>
+    <div class="ahead"><h2>${t("aManage")}</h2><button class="btn btn-sm" id="adX">${t("aClose")}</button></div>
     <div style="display:flex; gap:8px; margin-bottom:12px">
-      <button class="btn btn-primary" style="flex:1" id="adNew">+ Opret ny ret</button>
-      <button class="btn btn-sm" id="adSetup">Nøgle…</button>
+      <button class="btn btn-primary" style="flex:1" id="adNew">${t("aNew")}</button>
+      <button class="btn btn-sm" id="adSetup">${t("aKey")}</button>
     </div>
-    <div class="search" style="margin-bottom:12px"><input id="aq" type="search" placeholder="Søg…" value="${filter}"></div>
+    <div class="search" style="margin-bottom:12px"><input id="aq" type="search" placeholder="${t("aSearch")}" value="${filter}"></div>
     <div id="alist"></div>`;
   document.getElementById("adX").onclick = closeAdmin;
   document.getElementById("adSetup").onclick = viewSetup;
   document.getElementById("adNew").onclick = ()=>{ editIdx=null; viewEdit(); };
-  document.getElementById("aq").oninput = e => {
-    const v = e.target.value.trim().toLowerCase();
-    renderAList(rowsFor(v));
-  };
   const rowsFor = f => DATA.dishes.map((d,i)=>({d,i}))
     .filter(x=>!f || x.d.n.toLowerCase().includes(f))
     .sort((a,b)=> a.d.k.localeCompare(b.d.k,"da") || a.d.n.localeCompare(b.d.n,"da"));
-  renderAList(rows);
+  document.getElementById("aq").oninput = e => renderAList(rowsFor(e.target.value.trim().toLowerCase()));
+  renderAList(rowsFor(filter));
 }
 function renderAList(rows){
   const el = document.getElementById("alist");
@@ -544,21 +644,20 @@ function renderAList(rows){
   rows.forEach(({d,i})=>{
     const row = document.createElement("div");
     row.className = "arow" + (d.h ? " off" : "");
-    row.innerHTML = `<div class="an"><div class="t">${d.n}</div><div class="c">${d.k}${d.h?" · skjult":""}</div></div>`;
+    row.innerHTML = `<div class="an"><div class="t">${d.n}</div><div class="c">${d.k}${d.h?t("aHidden"):""}</div></div>`;
     const hideBtn = document.createElement("button");
     hideBtn.className = "btn btn-sm";
-    hideBtn.textContent = d.h ? "Vis" : "Skjul";
+    hideBtn.textContent = d.h ? t("aShow") : t("aHide");
     hideBtn.onclick = ()=>{ d.h ? delete d.h : d.h = 1; markDirty(); viewList(document.getElementById("aq").value.trim().toLowerCase()); };
     const editBtn = document.createElement("button");
     editBtn.className = "btn btn-sm";
-    editBtn.textContent = "Redigér";
+    editBtn.textContent = t("aEdit");
     editBtn.onclick = ()=>{ editIdx = i; viewEdit(); };
     row.append(hideBtn, editBtn);
     el.appendChild(row);
   });
 }
 
-/* ---- editor ---- */
 function viewEdit(){
   const d = editIdx===null
     ? {n:"", k:"", a:Array(14).fill(0), m:{}}
@@ -566,16 +665,16 @@ function viewEdit(){
   d.m = d.m || {};
   const cats = [...new Set(DATA.dishes.map(x=>x.k))].sort((a,b)=>a.localeCompare(b,"da"));
   adminEl.innerHTML = `
-    <div class="ahead"><h2>${editIdx===null?"Ny ret":"Redigér ret"}</h2><button class="btn btn-sm" id="adBack">‹ Tilbage</button></div>
-    <div class="field"><label>Navn</label><input type="text" id="eN" value="${d.n.replace(/"/g,"&quot;")}"></div>
-    <div class="field"><label>Kategori</label><input type="text" id="eK" list="katlist" value="${d.k.replace(/"/g,"&quot;")}">
+    <div class="ahead"><h2>${editIdx===null?t("aNewDish"):t("aEditDish")}</h2><button class="btn btn-sm" id="adBack">${t("aBack")}</button></div>
+    <div class="field"><label>${t("aName")}</label><input type="text" id="eN" value="${d.n.replace(/"/g,"&quot;")}"></div>
+    <div class="field"><label>${t("aCat")}</label><input type="text" id="eK" list="katlist" value="${d.k.replace(/"/g,"&quot;")}">
       <datalist id="katlist">${cats.map(c=>`<option value="${c}">`).join("")}</datalist></div>
-    <div class="field"><label>Note (valgfri – vises på retten)</label><textarea id="eNote">${d.note||""}</textarea></div>
-    <div class="label" style="margin-bottom:8px">Allergener – tryk for at skifte: Nej → Ja → Spor af → Ukendt</div>
+    <div class="field"><label>${t("aNote")}</label><textarea id="eNote">${d.note||""}</textarea></div>
+    <div class="label" style="margin-bottom:8px">${t("aCycle")}</div>
     <div id="evals"></div>
     <div style="display:flex; gap:10px; margin-top:18px">
-      <button class="btn btn-primary" style="flex:1" id="eSave">Gem ret</button>
-      <button class="btn" id="eCancel">Annullér</button>
+      <button class="btn btn-primary" style="flex:1" id="eSave">${t("aSaveDish")}</button>
+      <button class="btn" id="eCancel">${t("aCancel")}</button>
     </div>
     <div class="astatus" id="eStatus"></div>`;
   document.getElementById("adBack").onclick = ()=>viewList();
@@ -584,11 +683,12 @@ function viewEdit(){
   const evals = document.getElementById("evals");
   function drawVals(){
     evals.innerHTML = "";
-    ALLERGENS.forEach((a,i)=>{
+    const names = AL(), vt = VALTXT();
+    names.forEach((a,i)=>{
       const wrap = document.createElement("div");
       const row = document.createElement("div"); row.className = "aval";
       const st = document.createElement("button");
-      st.className = "st st-" + d.a[i]; st.textContent = VALTXT[d.a[i]];
+      st.className = "st st-" + d.a[i]; st.textContent = vt[d.a[i]];
       st.onclick = ()=>{ d.a[i] = (d.a[i]+1)%4; if(d.a[i]===0||d.a[i]===3) delete d.m[i]; drawVals(); };
       row.innerHTML = `<span class="nm2">${a}</span>`;
       row.appendChild(st);
@@ -596,7 +696,7 @@ function viewEdit(){
       if (d.a[i]===1 || d.a[i]===2){
         const mr = document.createElement("div"); mr.className="modrow";
         const inp = document.createElement("input");
-        inp.placeholder = "Tilpasning (valgfri), fx 'Servere uden sovs'";
+        inp.placeholder = t("aModPh");
         inp.value = d.m[i] || "";
         inp.oninput = ()=>{ inp.value.trim() ? d.m[i]=inp.value.trim() : delete d.m[i]; };
         mr.appendChild(inp);
@@ -611,7 +711,7 @@ function viewEdit(){
     const n = document.getElementById("eN").value.trim();
     const k = document.getElementById("eK").value.trim();
     const note = document.getElementById("eNote").value.trim();
-    if (!n || !k){ document.getElementById("eStatus").textContent = "⚠️ Navn og kategori skal udfyldes."; return; }
+    if (!n || !k){ document.getElementById("eStatus").textContent = t("aReq"); return; }
     const out = {n, k, a:d.a};
     if (Object.keys(d.m).length) out.m = d.m;
     if (note) out.note = note;
@@ -630,7 +730,7 @@ function b64(str){
 }
 pubbtn.onclick = async ()=>{
   if (!cfg.token){ openAdmin(); return; }
-  pubbtn.disabled = true; pubbtn.textContent = "Udgiver…";
+  pubbtn.disabled = true; pubbtn.textContent = t("pubBusy");
   try{
     const api = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/dishes.json`;
     const headers = {Authorization:"Bearer "+cfg.token, Accept:"application/vnd.github+json"};
@@ -642,14 +742,14 @@ pubbtn.onclick = async ()=>{
     const body = {message:"Menu opdateret via Allergi Guide", content:b64(JSON.stringify(DATA))};
     if (sha) body.sha = sha;
     const res = await fetch(api, {method:"PUT", headers, body:JSON.stringify(body)});
-    if (!res.ok) throw new Error("GitHub svarede " + res.status);
+    if (!res.ok) throw new Error("GitHub " + res.status);
     dirty = 0; pubbar.classList.remove("show");
     setUpdatedLabel(); buildCats(); render();
-    alert("✅ Udgivet! Alle telefoner får ændringerne, næste gang appen åbnes.");
+    alert(t("pubOk"));
   }catch(err){
-    alert("❌ Kunne ikke udgive: " + err.message + "\nTjek nøgle og repo-navn under ⚙️ → Nøgle…");
+    alert(t("pubErr") + err.message + t("pubErrTail"));
   }finally{
-    pubbtn.disabled = false; pubbtn.textContent = "Udgiv";
+    pubbtn.disabled = false; pubbtn.textContent = t("pubBtn");
   }
 };
 
