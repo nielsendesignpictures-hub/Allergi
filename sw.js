@@ -1,7 +1,7 @@
 /* Allergi Guide – service worker
    Strategi: network-first for index.html (så ny menu-data slår igennem),
    cache-fallback når der ikke er net. */
-const CACHE = "allergi-guide-v3";
+const CACHE = "allergi-guide-v5";
 const ASSETS = ["./", "./index.html", "./dishes.json", "./manifest.json", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
